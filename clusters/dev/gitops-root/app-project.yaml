@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: g-platform
+spec:
+  description: Layered platform stack for Argo CD, Argo Workflows, BuildKit, and KServe
+  sourceRepos:
+    - https://github.com/choijinwon/devopsAgent.git
+    - ghcr.io/kserve/charts
+  destinations:
+    - namespace: argo
+      server: https://kubernetes.default.svc
+    - namespace: buildkit
+      server: https://kubernetes.default.svc
+    - namespace: kserve
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: model-serving
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

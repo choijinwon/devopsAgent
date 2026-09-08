@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-g5-kserve-controller
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+spec:
+  project: g-platform
+  source:
+    repoURL: ghcr.io/kserve/charts
+    chart: kserve-resources
+    targetRevision: v0.20.0
+    helm:
+      parameters:
+        - name: kserve.controller.deploymentMode
+          value: Standard
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kserve
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

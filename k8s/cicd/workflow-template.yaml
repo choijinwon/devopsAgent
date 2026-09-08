@@ -1,0 +1,315 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: layered-model-cicd
+spec:
+  serviceAccountName: cicd-runner
+  entrypoint: pipeline
+  podGC:
+    strategy: OnWorkflowSuccess
+  ttlStrategy:
+    secondsAfterCompletion: 86400
+  arguments:
+    parameters:
+      - name: repo
+        value: https://github.com/choijinwon/devopsAgent.git
+      - name: revision
+        value: main
+      - name: deployBranch
+        value: main
+      - name: imageRepository
+        value: host.docker.internal:8080/library/layered-kserve
+      - name: versionSet
+        value: u24-cu128-py312-torch210-mlflow3152-kserve0190
+      - name: layer
+        value: all
+      - name: platform
+        value: linux/amd64
+      - name: valuesFile
+        value: charts/layered-model/values-local.yaml
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi
+  volumes:
+    - name: harbor-auth
+      secret:
+        secretName: harbor-docker-config
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+    - name: git-auth
+      secret:
+        secretName: cicd-git
+        optional: true
+    - name: local-source
+      configMap:
+        name: cicd-local-source
+  templates:
+    - name: pipeline
+      dag:
+        tasks:
+          - name: clone
+            template: clone
+          - name: build
+            dependencies: [clone]
+            template: build
+            arguments:
+              parameters:
+                - name: commit
+                  value: "{{tasks.clone.outputs.parameters.commit}}"
+          - name: update-gitops
+            dependencies: [build]
+            when: "'{{workflow.parameters.layer}}' == 'all' || '{{workflow.parameters.layer}}' == 'g6'"
+            template: update-gitops
+            arguments:
+              parameters:
+                - name: imageTag
+                  value: "{{tasks.build.outputs.parameters.imageTag}}"
+
+    - name: local-pipeline
+      dag:
+        tasks:
+          - name: prepare
+            template: prepare-local
+          - name: build
+            dependencies: [prepare]
+            template: build
+            arguments:
+              parameters:
+                - name: commit
+                  value: "{{tasks.prepare.outputs.parameters.commit}}"
+
+    - name: prepare-local
+      container:
+        image: alpine:3.22
+        command: [sh, -lc]
+        args:
+          - |
+            set -eu
+            rm -rf /workspace/source
+            mkdir -p /workspace/source/versions /workspace/source/src
+            cp /local-source/Dockerfile /workspace/source/Dockerfile
+            cp /local-source/version.env /workspace/source/versions/local.env
+            cp /local-source/model_server.py /workspace/source/src/model_server.py
+            sha256sum \
+              /workspace/source/Dockerfile \
+              /workspace/source/versions/local.env \
+              /workspace/source/src/model_server.py \
+              | sha256sum | cut -c1-12 > /tmp/commit
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: local-source
+            mountPath: /local-source
+            readOnly: true
+      outputs:
+        parameters:
+          - name: commit
+            valueFrom:
+              path: /tmp/commit
+
+    - name: clone
+      container:
+        image: alpine/git:2.49.1
+        command: [sh, -lc]
+        env:
+          - name: REPO_URL
+            value: "{{workflow.parameters.repo}}"
+          - name: REVISION
+            value: "{{workflow.parameters.revision}}"
+          - name: GIT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: cicd-git
+                key: username
+                optional: true
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: cicd-git
+                key: token
+                optional: true
+        args:
+          - |
+            set -eu
+            rm -rf /workspace/source
+            if [ -n "${GIT_TOKEN:-}" ]; then
+              git -c credential.helper='!f() { echo username="$GIT_USERNAME"; echo password="$GIT_TOKEN"; }; f' \
+                clone --branch "$REVISION" --single-branch "$REPO_URL" /workspace/source
+            else
+              git clone --branch "$REVISION" --single-branch "$REPO_URL" /workspace/source
+            fi
+            git -C /workspace/source rev-parse --short=12 HEAD > /tmp/commit
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+      outputs:
+        parameters:
+          - name: commit
+            valueFrom:
+              path: /tmp/commit
+
+    - name: build
+      inputs:
+        parameters:
+          - name: commit
+      container:
+        image: moby/buildkit:rootless
+        command: [sh, -lc]
+        env:
+          - name: DOCKER_CONFIG
+            value: /home/user/.docker
+          - name: IMAGE_REPOSITORY
+            value: "{{workflow.parameters.imageRepository}}"
+          - name: VERSION_SET
+            value: "{{workflow.parameters.versionSet}}"
+          - name: SELECTED_LAYER
+            value: "{{workflow.parameters.layer}}"
+          - name: PLATFORM
+            value: "{{workflow.parameters.platform}}"
+          - name: COMMIT_SHA
+            value: "{{inputs.parameters.commit}}"
+        args:
+          - |
+            set -eu
+            cd /workspace/source
+            version_file=""
+            for candidate in versions/*.env; do
+              if grep -q "^VERSION_SET=${VERSION_SET}$" "$candidate"; then
+                version_file="$candidate"
+                break
+              fi
+            done
+            if [ -z "$version_file" ]; then
+              echo "Unknown version set: $VERSION_SET" >&2
+              exit 1
+            fi
+            . "$version_file"
+
+            build_layer() {
+              layer="$1"
+              case "$layer" in
+                g0) target=g0-ubuntu ;;
+                g1) target=g1-cuda ;;
+                g2) target=g2-python ;;
+                g3) target=g3-pytorch ;;
+                g4) target=g4-mlflow ;;
+                g5) target=g5-kserve ;;
+                g6) target=g6-id ;;
+                *) echo "Unknown layer: $layer" >&2; exit 1 ;;
+              esac
+
+              image_tag="${VERSION_SET}-${COMMIT_SHA}-${layer}"
+              buildctl --addr tcp://buildkitd.buildkit.svc.cluster.local:1234 build \
+                --frontend dockerfile.v0 \
+                --local context=. \
+                --local dockerfile=. \
+                --opt filename=Dockerfile \
+                --opt target="$target" \
+                --opt platform="$PLATFORM" \
+                --opt "build-arg:UBUNTU_VERSION=$UBUNTU_VERSION" \
+                --opt "build-arg:CUDA_IMAGE=$CUDA_IMAGE" \
+                --opt "build-arg:PYTHON_PACKAGE=$PYTHON_PACKAGE" \
+                --opt "build-arg:PYTORCH_INDEX_URL=$PYTORCH_INDEX_URL" \
+                --opt "build-arg:PYTORCH_VERSION=$PYTORCH_VERSION" \
+                --opt "build-arg:TORCHVISION_VERSION=$TORCHVISION_VERSION" \
+                --opt "build-arg:TORCHAUDIO_VERSION=$TORCHAUDIO_VERSION" \
+                --opt "build-arg:MLFLOW_VERSION=$MLFLOW_VERSION" \
+                --opt "build-arg:KSERVE_PYTHON_VERSION=$KSERVE_PYTHON_VERSION" \
+                --opt "build-arg:APP_UID=$APP_UID" \
+                --opt "build-arg:APP_GID=$APP_GID" \
+                --opt "build-arg:APP_USER=$APP_USER" \
+                --output "type=image,name=${IMAGE_REPOSITORY}:${image_tag},push=true"
+            }
+
+            if [ "$SELECTED_LAYER" = all ]; then
+              for layer in g0 g1 g2 g3 g4 g5 g6; do
+                build_layer "$layer"
+              done
+              final_layer=g6
+            else
+              build_layer "$SELECTED_LAYER"
+              final_layer="$SELECTED_LAYER"
+            fi
+            printf '%s' "${VERSION_SET}-${COMMIT_SHA}-${final_layer}" > /tmp/image-tag
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          seccompProfile:
+            type: Unconfined
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: harbor-auth
+            mountPath: /home/user/.docker
+            readOnly: true
+      outputs:
+        parameters:
+          - name: imageTag
+            valueFrom:
+              path: /tmp/image-tag
+
+    - name: update-gitops
+      inputs:
+        parameters:
+          - name: imageTag
+      container:
+        image: alpine:3.22
+        command: [sh, -lc]
+        env:
+          - name: REPO_URL
+            value: "{{workflow.parameters.repo}}"
+          - name: DEPLOY_BRANCH
+            value: "{{workflow.parameters.deployBranch}}"
+          - name: VALUES_FILE
+            value: "{{workflow.parameters.valuesFile}}"
+          - name: IMAGE_REPOSITORY
+            value: "{{workflow.parameters.imageRepository}}"
+          - name: IMAGE_TAG
+            value: "{{inputs.parameters.imageTag}}"
+          - name: GIT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: cicd-git
+                key: username
+                optional: true
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: cicd-git
+                key: token
+                optional: true
+        args:
+          - |
+            set -eu
+            if [ -z "${GIT_TOKEN:-}" ]; then
+              echo "cicd-git secret is required for the CD step" >&2
+              exit 1
+            fi
+            apk add --no-cache git yq
+            cd /workspace/source
+            git fetch origin "$DEPLOY_BRANCH"
+            git checkout -B "$DEPLOY_BRANCH" "origin/$DEPLOY_BRANCH"
+            yq -i '.image.repository = strenv(IMAGE_REPOSITORY) | .image.tag = strenv(IMAGE_TAG)' "$VALUES_FILE"
+            git config user.name "Argo CI/CD"
+            git config user.email "argo-cicd@local"
+            git add "$VALUES_FILE"
+            if git diff --cached --quiet; then
+              echo "GitOps values are already current"
+              exit 0
+            fi
+            git commit -m "deploy: ${IMAGE_TAG} [skip ci]"
+            git -c credential.helper='!f() { echo username="$GIT_USERNAME"; echo password="$GIT_TOKEN"; }; f' \
+              push origin "HEAD:$DEPLOY_BRANCH"
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: git-auth
+            mountPath: /var/run/secrets/cicd-git
+            readOnly: true

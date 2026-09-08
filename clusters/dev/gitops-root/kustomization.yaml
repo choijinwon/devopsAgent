@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - app-project.yaml
+  - application-argo-workflows.yaml
+  - application-cicd.yaml
+  - application-buildkit.yaml
+  - application-kserve-crds.yaml
+  - application-kserve-controller.yaml
+  - application-kserve-runtimes.yaml
+  - application-layered-model.yaml
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/part-of: g-platform
+      platform.openai.com/root: gitops

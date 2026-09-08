@@ -1,0 +1,24 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: layered-model
+  namespace: model-serving
+spec:
+  predictor:
+    containers:
+      - name: kserve-container
+        image: ghcr.io/your-org/layered-kserve:u24-cu128-py312-torch210-mlflow3152-kserve0190-g6
+        ports:
+          - containerPort: 8080
+        env:
+          - name: MODEL_NAME
+            value: layered-model
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "2"
+            memory: 4Gi
+            nvidia.com/gpu: "1"

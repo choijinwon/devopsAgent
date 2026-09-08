@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-g3-buildkit
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+spec:
+  project: g-platform
+  source:
+    repoURL: https://github.com/choijinwon/devopsAgent.git
+    targetRevision: HEAD
+    path: clusters/dev/overlays/kind/g3-buildkit
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: buildkit
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

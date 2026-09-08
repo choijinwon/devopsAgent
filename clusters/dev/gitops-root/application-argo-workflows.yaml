@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-g2-argo-workflows
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  project: g-platform
+  source:
+    repoURL: https://github.com/choijinwon/devopsAgent.git
+    targetRevision: HEAD
+    path: clusters/dev/layers/g2-argo-workflows
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

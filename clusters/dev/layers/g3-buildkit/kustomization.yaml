@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: buildkit
+resources:
+  - namespace.yaml
+  - service-account.yaml
+  - rbac.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: buildkitd
+      app.kubernetes.io/part-of: g-platform
+      platform.openai.com/layer: g3

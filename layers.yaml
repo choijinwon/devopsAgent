@@ -1,0 +1,34 @@
+layers:
+  g0:
+    name: ubuntu
+    docker_target: g0-ubuntu
+    description: Ubuntu base layer
+  g1:
+    name: cuda
+    docker_target: g1-cuda
+    description: NVIDIA CUDA runtime on Ubuntu
+  g2:
+    name: python
+    docker_target: g2-python
+    description: Python virtualenv and build tools
+  g3:
+    name: pytorch
+    docker_target: g3-pytorch
+    description: PyTorch CUDA wheels
+  g4:
+    name: mlflow
+    docker_target: g4-mlflow
+    description: MLflow runtime
+  g5:
+    name: kserve
+    docker_target: g5-kserve
+    description: KServe Python ModelServer
+  g6:
+    name: id
+    docker_target: g6-id
+    description: Non-root runtime identity and final entrypoint
+version_sets:
+  - u24-cu128-py312-torch210-mlflow3152-kserve0190
+  - u24-cu128-py312-torch270-mlflow3152-kserve0190
+  - u24-cu126-py312-torch270-mlflow3152-kserve0190
+  - u22-cu128-py310-torch270-mlflow3152-kserve0190

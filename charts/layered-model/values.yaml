@@ -1,0 +1,38 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: true
+  name: model-serving
+
+image:
+  repository: localhost:8080/library/layered-kserve
+  tag: u24-cu128-py312-torch210-mlflow3152-kserve0190-g6
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+model:
+  name: layered-model
+  httpPort: 8080
+
+serviceAccount:
+  create: true
+  name: ""
+
+gpu:
+  enabled: true
+  resourceName: nvidia.com/gpu
+  count: 1
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+env: []
+
+annotations: {}
+labels: {}

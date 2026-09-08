@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: layered-model-cicd
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+spec:
+  project: g-platform
+  source:
+    repoURL: https://github.com/choijinwon/devopsAgent.git
+    targetRevision: HEAD
+    path: k8s/cicd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

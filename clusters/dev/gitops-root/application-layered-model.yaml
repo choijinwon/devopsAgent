@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: layered-model
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+spec:
+  project: g-platform
+  source:
+    repoURL: https://github.com/choijinwon/devopsAgent.git
+    targetRevision: HEAD
+    path: charts/layered-model
+    helm:
+      valueFiles:
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: model-serving
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

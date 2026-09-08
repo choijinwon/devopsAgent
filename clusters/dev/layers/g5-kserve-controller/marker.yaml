@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kserve-layer-g4
+data:
+  source: https://github.com/kserve/kserve/releases/download/v0.20.0/kserve.yaml
+  mode: Standard

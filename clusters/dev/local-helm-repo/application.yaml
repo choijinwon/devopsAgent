@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: layered-model
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://local-helm-repo.argocd.svc.cluster.local
+    chart: layered-model
+    targetRevision: 0.1.0
+    helm:
+      releaseName: layered-model
+      valueFiles:
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: model-serving
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

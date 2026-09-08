@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-helm-repo
+  labels:
+    app.kubernetes.io/name: local-helm-repo
+spec:
+  selector:
+    app.kubernetes.io/name: local-helm-repo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,39 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.model.name | quote }}
+  namespace: {{ .Values.namespace.name | quote }}
+  labels:
+    {{- include "layered-model.labels" . | nindent 4 }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  predictor:
+    serviceAccountName: {{ include "layered-model.serviceAccountName" . }}
+    containers:
+      - name: kserve-container
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+          - containerPort: {{ .Values.model.httpPort }}
+        env:
+          - name: MODEL_NAME
+            value: {{ .Values.model.name | quote }}
+          {{- with .Values.env }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        resources:
+          requests:
+            cpu: {{ .Values.resources.requests.cpu | quote }}
+            memory: {{ .Values.resources.requests.memory | quote }}
+            {{- if .Values.gpu.enabled }}
+            {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count | quote }}
+            {{- end }}
+          limits:
+            cpu: {{ .Values.resources.limits.cpu | quote }}
+            memory: {{ .Values.resources.limits.memory | quote }}
+            {{- if .Values.gpu.enabled }}
+            {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count | quote }}
+            {{- end }}

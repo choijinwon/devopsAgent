@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd-config
+data:
+  buildkitd.toml: |
+    debug = false
+
+    [registry."host.docker.internal:8080"]
+      http = true
+      insecure = true

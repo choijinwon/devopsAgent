@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-helm-repo
+  labels:
+    app.kubernetes.io/name: local-helm-repo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-helm-repo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: local-helm-repo
+    spec:
+      containers:
+        - name: repository
+          image: python:3.12-alpine
+          command: [python, -m, http.server]
+          args: ["8080", --directory, /repo]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /index.yaml
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+          volumeMounts:
+            - name: repository
+              mountPath: /repo
+              readOnly: true
+      volumes:
+        - name: repository
+          configMap:
+            name: local-helm-repo-content

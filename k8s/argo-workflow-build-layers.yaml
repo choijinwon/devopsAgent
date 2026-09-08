@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: layered-model-cicd-
+  namespace: argo
+spec:
+  workflowTemplateRef:
+    name: layered-model-cicd
+  entrypoint: local-pipeline
+  arguments:
+    parameters:
+      - name: imageRepository
+        value: host.docker.internal:8080/library/layered-kserve
+      - name: versionSet
+        value: u24-cu128-py312-torch210-mlflow3152-kserve0190
+      - name: layer
+        value: g0

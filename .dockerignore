@@ -1,0 +1,8 @@
+.git
+.env
+data/
+local/
+docs/
+clusters/
+k8s/
+versions/

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buildkitd
+  namespace: buildkit
+spec:
+  template:
+    metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/buildkitd: unconfined
+    spec:
+      containers:
+        - name: buildkitd
+          securityContext:
+            allowPrivilegeEscalation: true
+            appArmorProfile:
+              type: Unconfined
+            capabilities:
+              add:
+                - SETGID
+                - SETUID

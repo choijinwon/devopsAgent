@@ -1,0 +1,6 @@
+apiVersion: v2
+name: layered-model
+description: KServe InferenceService chart for versioned layered ML base images
+type: application
+version: 0.1.0
+appVersion: "u24-cu128-py312-torch210-mlflow3152-kserve0190"

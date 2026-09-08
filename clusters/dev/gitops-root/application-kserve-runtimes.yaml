@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: infra-g6-kserve-runtimes
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+spec:
+  project: g-platform
+  source:
+    repoURL: ghcr.io/kserve/charts
+    chart: kserve-runtime-configs
+    targetRevision: v0.20.0
+    helm:
+      parameters:
+        - name: kserve.servingruntime.enabled
+          value: "true"
+        - name: kserve.llmisvcConfigs.enabled
+          value: "false"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kserve
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
