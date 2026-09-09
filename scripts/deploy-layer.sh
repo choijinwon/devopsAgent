@@ -73,6 +73,10 @@ deploy_g5() {
   kubectl apply --server-side --force-conflicts -f "https://github.com/kserve/kserve/releases/download/${KSERVE_VERSION}/kserve.yaml"
   if [[ "${KSERVE_MODE}" == "Standard" ]]; then
     kubectl -n kserve patch configmap inferenceservice-config --type merge -p '{"data":{"deploy":"{\"defaultDeploymentMode\":\"Standard\"}"}}'
+    local ingress_config ingress_patch
+    ingress_config="$(kubectl -n kserve get configmap inferenceservice-config -o jsonpath='{.data.ingress}' | jq -c '.disableIstioVirtualHost = true')"
+    ingress_patch="$(jq -cn --arg ingress "${ingress_config}" '{data:{ingress:$ingress}}')"
+    kubectl -n kserve patch configmap inferenceservice-config --type merge -p "${ingress_patch}"
   fi
   kubectl -n kserve rollout status deploy/kserve-controller-manager --timeout=300s
 }
