@@ -127,6 +127,12 @@ MLflow UI:
 http://localhost:5001
 ```
 
+YOLO11n 모델을 MLflow Registry에 등록하고 예측을 검증합니다.
+
+```bash
+make mlflow-yolo-test
+```
+
 ```bash
 make helm-template
 make helm-install-model

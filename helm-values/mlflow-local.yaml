@@ -5,6 +5,7 @@ server:
     host: "0.0.0.0"
     port: 5000
     workers: 2
+    allowed_hosts: "mlflow-mlflow:5000,mlflow-mlflow.mlflow:5000,mlflow-mlflow.mlflow.svc:5000,mlflow-mlflow.mlflow.svc.cluster.local:5000,localhost:*,127.0.0.1:*"
   flag_options:
     - serve_artifacts
 

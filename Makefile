@@ -7,7 +7,7 @@ MLFLOW_CHART_VERSION ?= 0.1.0
 MLFLOW_LOCAL_PORT ?= 5001
 ARGO_WORKFLOWS_LOCAL_PORT ?= 2746
 
-.PHONY: build-base build-base-all list-version-sets helm-template helm-install-model helm-uninstall-model argocd-install-local-helm mlflow-install mlflow-upgrade mlflow-uninstall mlflow-status mlflow-port-forward argo-workflows-port-forward install-harbor harbor-up harbor-down harbor-status cicd-install cicd-enable-kind-buildkit cicd-configure-kind-registry cicd-run cicd-smoke cicd-status deploy deploy-gitops destroy destroy-gitops validate status
+.PHONY: build-base build-base-all list-version-sets helm-template helm-install-model helm-uninstall-model argocd-install-local-helm mlflow-install mlflow-upgrade mlflow-uninstall mlflow-status mlflow-port-forward mlflow-yolo-test argo-workflows-port-forward install-harbor harbor-up harbor-down harbor-status cicd-install cicd-enable-kind-buildkit cicd-configure-kind-registry cicd-run cicd-smoke cicd-status deploy deploy-gitops destroy destroy-gitops validate status
 
 build-base:
 	IMAGE_REPO=$(IMAGE_REPO) VERSION_SET=$(VERSION_SET) LAYER=$(LAYER) scripts/build-version-set.sh $(VERSION_SET)
@@ -45,6 +45,9 @@ mlflow-status:
 
 mlflow-port-forward:
 	kubectl port-forward -n mlflow svc/mlflow-mlflow $(MLFLOW_LOCAL_PORT):5000 --address 127.0.0.1
+
+mlflow-yolo-test:
+	scripts/run-mlflow-yolo.sh
 
 argo-workflows-port-forward:
 	ARGO_WORKFLOWS_LOCAL_PORT=$(ARGO_WORKFLOWS_LOCAL_PORT) scripts/port-forward-argo-workflows.sh
