@@ -7,7 +7,7 @@ MLFLOW_CHART_VERSION ?= 0.1.0
 MLFLOW_LOCAL_PORT ?= 5001
 ARGO_WORKFLOWS_LOCAL_PORT ?= 2746
 
-.PHONY: build-base build-base-all list-version-sets helm-template helm-install-model helm-uninstall-model argocd-install-local-helm mlflow-install mlflow-upgrade mlflow-uninstall mlflow-status mlflow-port-forward mlflow-yolo-test argo-workflows-port-forward install-harbor harbor-up harbor-down harbor-status cicd-install cicd-enable-kind-buildkit cicd-configure-kind-registry cicd-run cicd-smoke cicd-status deploy deploy-gitops destroy destroy-gitops validate status
+.PHONY: build-base build-base-all list-version-sets helm-template helm-install-model helm-uninstall-model argocd-install-local-helm mlflow-install mlflow-upgrade mlflow-uninstall mlflow-status mlflow-port-forward mlflow-yolo-test mlflow-yolo-deploy mlflow-yolo-endpoint-test argo-workflows-port-forward install-harbor harbor-up harbor-down harbor-status cicd-install cicd-enable-kind-buildkit cicd-configure-kind-registry cicd-run cicd-smoke cicd-status deploy deploy-gitops destroy destroy-gitops validate status
 
 build-base:
 	IMAGE_REPO=$(IMAGE_REPO) VERSION_SET=$(VERSION_SET) LAYER=$(LAYER) scripts/build-version-set.sh $(VERSION_SET)
@@ -48,6 +48,12 @@ mlflow-port-forward:
 
 mlflow-yolo-test:
 	scripts/run-mlflow-yolo.sh
+
+mlflow-yolo-deploy:
+	scripts/deploy-mlflow-yolo-endpoint.sh
+
+mlflow-yolo-endpoint-test:
+	scripts/test-mlflow-yolo-endpoint.sh
 
 argo-workflows-port-forward:
 	ARGO_WORKFLOWS_LOCAL_PORT=$(ARGO_WORKFLOWS_LOCAL_PORT) scripts/port-forward-argo-workflows.sh
