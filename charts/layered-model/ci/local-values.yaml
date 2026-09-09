@@ -1,6 +1,6 @@
 image:
   repository: localhost:8080/library/layered-kserve
-  tag: u24-cu128-py312-torch210-mlflow3152-kserve0190-g6
+  tag: u24-cu128-py312-torch210-mlflow3152-kserve0190-c269b4c78ded-g6
 
 gpu:
   enabled: false

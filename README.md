@@ -132,7 +132,7 @@ make helm-template
 make helm-install-model
 ```
 
-기본 이미지는 로컬 Harbor의 `localhost:8080/library/layered-kserve:u24-cu128-py312-torch210-mlflow3152-kserve0190-g6`를 사용합니다.
+로컬 배포 이미지는 `charts/layered-model/values-local.yaml`에 기록된 Harbor 태그를 사용합니다.
 
 자세한 내용은 [docs/helm.md](docs/helm.md)를 봅니다.
 

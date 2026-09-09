@@ -22,5 +22,5 @@ helm upgrade --install layered-model charts/layered-model \
 기본 이미지는 로컬 Harbor를 가리킵니다.
 
 ```text
-localhost:8080/library/layered-kserve:u24-cu128-py312-torch210-mlflow3152-kserve0190-g6
+localhost:8080/library/layered-kserve:u24-cu128-py312-torch210-mlflow3152-kserve0190-c269b4c78ded-g6
 ```
